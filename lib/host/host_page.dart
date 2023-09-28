@@ -2,6 +2,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:ray_memex/base/commons.dart';
+import 'package:ray_memex/host/pane_items.dart';
 import 'package:ray_memex/host/router.dart';
 import 'package:ray_memex/theme.dart';
 
@@ -20,47 +21,6 @@ class _HostPageState extends State<HostPage> {
   final searchKey = GlobalKey(debugLabel: 'Search bar key');
   final searchFocusNode = FocusNode();
   final searchController = TextEditingController();
-
-  late final List<PaneItem> originalItems = [
-    PaneItem(
-        key: const ValueKey('/'),
-        icon: const Icon(FluentIcons.home),
-        body: const SizedBox.shrink()),
-    PaneItem(
-        key: const ValueKey('/books'),
-        title: const Text('书籍'),
-        icon: const Icon(FluentIcons.book_answers),
-        body: const SizedBox.shrink())
-  ].map((e) {
-    // ignore: unnecessary_type_check
-    if (e is PaneItem) {
-      return PaneItem(
-          key: e.key,
-          icon: e.icon,
-          title: e.title,
-          body: e.body,
-          onTap: () {
-            final path = (e.key as ValueKey).value as String;
-            if (GoRouterState.of(context).uri.toString() != path) {
-              context.go(path);
-            }
-            e.onTap?.call();
-          });
-    }
-    return e;
-  }).toList();
-
-  late final List<PaneItem> footerItems = [
-    PaneItem(
-        key: const ValueKey('/settings'),
-        icon: const Icon(FluentIcons.settings),
-        body: const SizedBox.shrink(),
-        onTap: () {
-          if (GoRouterState.of(context).uri.toString() != '/settings') {
-            context.go('/settings');
-          }
-        })
-  ];
 
   @override
   void initState() {
@@ -84,6 +44,9 @@ class _HostPageState extends State<HostPage> {
         setState(() {});
       }
     }
+
+    final List<NavigationPaneItem> sidebarItems = getSidebarItems(context);
+    final List<PaneItem> sidebarFooterItems = getSidebarFooterItems(context);
 
     return NavigationView(
         key: viewKey,
@@ -146,7 +109,8 @@ class _HostPageState extends State<HostPage> {
               key: ValueKey('body$name'), child: widget.child);
         },
         pane: NavigationPane(
-            selected: _calculateSelectedIndex(context),
+            selected: _calculateSelectedIndex(
+                context, sidebarItems, sidebarFooterItems),
             header: SizedBox(
               height: kOneLineTileHeight,
               child: ShaderMask(
@@ -169,13 +133,14 @@ class _HostPageState extends State<HostPage> {
                   return const StickyNavigationIndicator();
               }
             }(),
-            items: originalItems,
-            footerItems: footerItems));
+            items: sidebarItems,
+            footerItems: sidebarFooterItems));
   }
 
-  int _calculateSelectedIndex(BuildContext context) {
+  int _calculateSelectedIndex(BuildContext context,
+      List<NavigationPaneItem> items, List<PaneItem> footerItems) {
     final location = GoRouterState.of(context).uri.toString();
-    int indexOriginal = originalItems
+    int indexOriginal = items
         .where((item) => item.key != null)
         .toList()
         .indexWhere((item) => item.key == Key(location));
@@ -188,10 +153,7 @@ class _HostPageState extends State<HostPage> {
       if (indexFooter == -1) {
         return 0;
       }
-      return originalItems
-              .where((element) => element.key != null)
-              .toList()
-              .length +
+      return items.where((element) => element.key != null).toList().length +
           indexFooter;
     } else {
       return indexOriginal;
